@@ -1,0 +1,35 @@
+GENERAL:
+    initial_lr: 3.0e-4
+
+BACKBONE:
+    NAME: "minkunet"
+
+    minkunet:
+        DIMENSION: 3                    # 3D pts
+        CR: 1                           # channel ratio, change feature dimensions
+        #CHANNELS: [8, 12, 16, 16, 16]
+        CHANNELS: [8, 8, 16, 16, 64]
+        #CHANNELS: [8, 16, 16, 32, 64]
+        #CHANNELS: [8, 16, 32, 32, 32]
+        RESOLUTION: 0.0005
+        INTERPOLATE: True               # feature interpolation
+        KNN_UP: 3
+        FEAT_KEY: normals               #dict key to acces features
+        INPUT_DIM: 6                    # feat dim: coords + intensity
+        PRETRAINING:
+            NUM_NEG: 600
+        dropout: 0.05
+
+NECK:
+    NAME: "None"
+    #NAME: "gcn"
+
+NECK_gcn:
+    CONV_LAYER: "GCNConv"
+    #CONV_LAYER: "EdgeConv"
+    graph_radius: 0.2
+
+MATCHER:
+    INTERN_DIM: 512
+    DIM_FEEDFORWARD: 512 #512
+    NUM_HEADS: 8

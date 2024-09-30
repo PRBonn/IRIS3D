@@ -1,0 +1,12 @@
+open3d
+torch_geometric==2.5.3
+numpy==1.24.4
+tqdm
+pyyaml
+typer
+easydict==1.9
+matplotlib==3.5.1
+pytorch_lightning
+scikit_learn==1.1.2
+ninja
+opencv-python
