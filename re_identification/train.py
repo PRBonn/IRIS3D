@@ -48,8 +48,8 @@ class CrossValidationSetup:
         self.iou_th   = iou_th
         self.seed = seeds[self.seedidx]
 
-        self.minx = 28.5 #27.58
-        self.maxx = 29.3 #28.5 #29.45
+        self.minx = 27.58
+        self.maxx = 29.45
 
         self.epoch = 0
         self.max_epochs_num = max_epochs_num
