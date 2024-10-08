@@ -51,38 +51,54 @@ def main(
         help="IoU threshold. If negative, load GT annotations.",
     ),
 ):
-    transformation_path = os.path.join(datapath, "transformations.yaml")
+    # transformation_path = os.path.join(datapath, "transformations.yaml")
     
-    with open(transformation_path, "r") as stream:
-        try:
-            transformations = yaml.safe_load(stream)["transformations"]
-        except yaml.YAMLError as exc:
-            print(exc)
+    # with open(transformation_path, "r") as stream:
+    #     try:
+    #         transformations = yaml.safe_load(stream)["transformations"]
+    #     except yaml.YAMLError as exc:
+    #         print(exc)
 
-    gt_08 = np.asarray(transformations["gt_08"])
-    gt_14 = np.asarray(transformations["gt_14"])
-    gt_21 = np.asarray(transformations["gt_21"])
+    # gt_08 = np.asarray(transformations["gt_08"])
+    # gt_14 = np.asarray(transformations["gt_14"])
+    # gt_21 = np.asarray(transformations["gt_21"])
 
-    min_x = 27.6
-    max_x = 28.5
+    # min_x = 0
+    # max_x = 100
 
-    if iou<0:
-        straw_path = os.path.join(datapath, f"14_21")
-    else:
-        straw_path = os.path.join(datapath, f"14_21_inst@{iou}")
+    # if iou<0:
+    #     straw_path = os.path.join(datapath, f"14_21")
+    # else:
+    #     straw_path = os.path.join(datapath, f"14_21_inst@{iou}")
 
-    data_21_gt   = Strawberries(f"{straw_path}/strawberries_21", os.path.join(straw_path, "selections_2.json"), gt_21, min_x=min_x, max_x=max_x)
-    data_14_test = Strawberries(f"{straw_path}/strawberries_14", os.path.join(straw_path, "selections_1.json"), gt_14, min_x=min_x, max_x=max_x)
-    conn_gt_test = LossConnection(os.path.join(straw_path, "connections.json"), data_14_test, data_21_gt)
+    # data_21_gt   = Strawberries(f"{straw_path}/strawberries_21", os.path.join(straw_path, "selections_2.json"), gt_21, min_x=min_x, max_x=max_x)
+    # data_14_test = Strawberries(f"{straw_path}/strawberries_14", os.path.join(straw_path, "selections_1.json"), gt_14, min_x=min_x, max_x=max_x)
+    # conn_gt_test = LossConnection(os.path.join(straw_path, "connections.json"), data_14_test, data_21_gt)
     
-    straw_path = os.path.join(datapath, f"08_14")
-    data_14_gt   = Strawberries(f"{straw_path}/strawberries_14", os.path.join(straw_path, "selections_2.json"), gt_14, min_x=min_x, max_x=max_x)
-    data_08_gt   = Strawberries(f"{straw_path}/strawberries_08", os.path.join(straw_path, "selections_1.json"), gt_08, min_x=min_x, max_x=max_x)
-    conn_gt      = LossConnection(os.path.join(straw_path, "connections.json"), data_08_gt, data_14_gt)
+    # straw_path = os.path.join(datapath, f"08_14")
+    # data_14_gt   = Strawberries(f"{straw_path}/strawberries_14", os.path.join(straw_path, "selections_2.json"), gt_14, min_x=min_x, max_x=max_x)
+    # data_08_gt   = Strawberries(f"{straw_path}/strawberries_08", os.path.join(straw_path, "selections_1.json"), gt_08, min_x=min_x, max_x=max_x)
+    # conn_gt      = LossConnection(os.path.join(straw_path, "connections.json"), data_08_gt, data_14_gt)
 
-    cloud_path = os.path.join(datapath, "reduced_08_14_1.ply")
+    cloud_path = os.path.join(datapath, "map.ply")
     pcd08 = o3d.io.read_point_cloud(cloud_path)
-    pcd08, rotc08 = apply(pcd08, gt_08, min_x, max_x, mask=True)
+    # pcd08, rotc08 = apply(pcd08, gt_08, min_x, max_x, mask=True)
+
+    file_path = os.path.join(datapath, "labels.txt")
+
+    with open(file_path, 'r') as file:
+        # Read each line, convert to an integer, and store it in a list
+        labels = np.array([int(line.strip()) for line in file])
+
+    np.random.seed(0)
+    table = np.random.uniform(0.1, 1.0, (labels.max()+1, 3))
+    table[0, :] = 0
+
+    newcolors = table[labels]
+    pcd08.colors = o3d.utility.Vector3dVector(newcolors)
+
+    o3d.visualization.draw(pcd08)
+    quit()
 
 
     # off08_14 = [0, 0.151, 0]

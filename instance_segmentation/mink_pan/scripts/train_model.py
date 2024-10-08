@@ -6,7 +6,7 @@ from os.path import join
 import torch
 import yaml
 from easydict import EasyDict as edict
-from mink_pan.datasets.daniel_dataset import SemanticDatasetModule
+from mink_pan.datasets.deploy_dataset import SemanticDatasetModule
 from mink_pan.models.model import MinkPan
 from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
@@ -100,8 +100,6 @@ def main(w=None, ckpt=None, nuscenes=False, mini=False, seq=None, id=None):
     # lr_finder = trainer.tuner.lr_find(model,data,min_lr=1e-8,max_lr=1e-2, num_training=10000)
     # fig = lr_finder.plot(suggest=True)
     # plt.savefig('lr_finder')
-
-    quit()
 
     trainer.fit(model, data)
 

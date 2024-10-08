@@ -27,7 +27,7 @@ class Strawberries(Dataset):
         self.fruit_radius = []
         self.T = T
         self.foldername1 = ply_path #f"../strawberries_{seq}"
-        self.foldername2 = ply_path + "_more" #f"../strawberries_{seq}_more"
+        self.foldername2 = ply_path #+ "_more" #f"../strawberries_{seq}_more"
         #self.foldername_detectorfail = f"../strawberries_detectorfailssimulation_{seq}"
         self.training = training
 
@@ -49,31 +49,31 @@ class Strawberries(Dataset):
         self.fruit_radius    = np.array(self.fruit_radius)
 
         #### transform centers to world frame ####
-        pts = np.ones((self.centers.shape[0], 4))
-        pts[:, :3] = self.centers
-        pts = pts.T
-        self.centers = np.matmul(self.T, pts).T[:, :3]
+        # pts = np.ones((self.centers.shape[0], 4))
+        # pts[:, :3] = self.centers
+        # pts = pts.T
+        # self.centers = np.matmul(self.T, pts).T[:, :3]
 
         #print("min x: ", self.centers[:, 0].min())
         #print("max x: ", self.centers[:, 0].max())
 
-        if self.training and self.generatefails:
+        # if self.training and self.generatefails:
 
-            files = glob.glob(f"{self.foldername_detectorfail}/fail_*")
-            for file in files:
-                pcd = o3d.io.read_point_cloud(file)
-                self.failcenters.append(pcd.get_center())
-                self.failpath.append(os.path.basename(file))
+        #     files = glob.glob(f"{self.foldername_detectorfail}/fail_*")
+        #     for file in files:
+        #         pcd = o3d.io.read_point_cloud(file)
+        #         self.failcenters.append(pcd.get_center())
+        #         self.failpath.append(os.path.basename(file))
             
-            self.failcenters = np.array(self.failcenters)
-            self.failpath = np.array(self.failpath)
+        #     self.failcenters = np.array(self.failcenters)
+        #     self.failpath = np.array(self.failpath)
 
 
-            #### transform centers to world frame ####
-            pts = np.ones((self.failcenters.shape[0], 4))
-            pts[:, :3] = self.failcenters
-            pts = pts.T
-            self.failcenters = np.matmul(self.T, pts).T[:, :3]
+        #     #### transform centers to world frame ####
+        #     pts = np.ones((self.failcenters.shape[0], 4))
+        #     pts[:, :3] = self.failcenters
+        #     pts = pts.T
+        #     self.failcenters = np.matmul(self.T, pts).T[:, :3]
 
 
         #### load only part of the dataset ####
@@ -93,25 +93,25 @@ class Strawberries(Dataset):
         self.keys    = self.keys[mask].tolist()
         self.fruit_radius    = self.fruit_radius[mask].tolist()
 
-        if self.training and self.generatefails:
+        # if self.training and self.generatefails:
 
-            mask = np.logical_and(self.failcenters[:, 0]>min_x,self.failcenters[:, 0]<max_x)
-            self.failcenters = self.failcenters[mask]
-            self.failkeys    = np.ones(self.failcenters.shape[0], dtype=int)*-1
+        #     mask = np.logical_and(self.failcenters[:, 0]>min_x,self.failcenters[:, 0]<max_x)
+        #     self.failcenters = self.failcenters[mask]
+        #     self.failkeys    = np.ones(self.failcenters.shape[0], dtype=int)*-1
 
-            failidxs = np.arange(self.failcenters.shape[0])
-            np.random.shuffle(failidxs)
-            failidxs = failidxs[:10]
-            self.failcenters = self.failcenters[failidxs]
-            self.failpath    = self.failpath[failidxs]
-            self.failkeys    = self.failkeys[failidxs]
+        #     failidxs = np.arange(self.failcenters.shape[0])
+        #     np.random.shuffle(failidxs)
+        #     failidxs = failidxs[:10]
+        #     self.failcenters = self.failcenters[failidxs]
+        #     self.failpath    = self.failpath[failidxs]
+        #     self.failkeys    = self.failkeys[failidxs]
 
 
         self.real_centers_num = self.centers.shape[0]
 
-        if self.training and self.generatefails:
-            self.centers = np.concatenate((self.centers, self.failcenters), axis=0)
-            self.keys = np.concatenate((self.keys, self.failkeys), axis=0).tolist()
+        # if self.training and self.generatefails:
+        #     self.centers = np.concatenate((self.centers, self.failcenters), axis=0)
+        #     self.keys = np.concatenate((self.keys, self.failkeys), axis=0).tolist()
 
         
 
@@ -122,7 +122,7 @@ class Strawberries(Dataset):
 
 
         self.radius = 0.2
-        self.res = 0.0005
+        self.res = 0.01 #0.0005
     
     def __len__(self):
         return len(self.centers)
@@ -163,7 +163,7 @@ class Strawberries(Dataset):
 
         
         pcd = o3d.io.read_point_cloud(path)
-        pcd.transform(self.T)
+        # pcd.transform(self.T)
         if shift is not None:
             pcd.translate(shift)
 
@@ -200,7 +200,7 @@ class Strawberries(Dataset):
         center = self.centers[idx]
 
         if idx<self.real_centers_num:
-            path = f"{self.foldername2}/straw_{str(int(float(key))).zfill(3)}.ply"
+            path = f"{self.foldername2}/pepper_{str(int(float(key))).zfill(3)}.ply"
         else:
             idx_o = idx - self.real_centers_num
             path = f"{self.foldername_detectorfail}/{self.failpath[idx_o]}"

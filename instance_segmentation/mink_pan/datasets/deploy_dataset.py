@@ -22,6 +22,8 @@ class SemanticDatasetModule(LightningDataModule):
         self.min_volume_space = cfg[cfg.MODEL.DATASET].MIN_VOLUME_SPACE
         self.max_volume_space = cfg[cfg.MODEL.DATASET].MAX_VOLUME_SPACE
 
+        self.setup()
+
     def prepare_data(self):
         pass
 
@@ -65,18 +67,18 @@ class SemanticDatasetModule(LightningDataModule):
             dataset=val_set, split="valid", space=self.cfg[self.cfg.MODEL.DATASET].SPACE
         )
 
-        test_set = SemanticDataset(
-            self.cfg[self.cfg.MODEL.DATASET].PATH,
-            self.cfg[self.cfg.MODEL.DATASET].CONFIG,
-            split="test",
-            seq=only_seq,
-            dataset=self.dataset,
-        )
-        self.test_pan_set = PanopticDataset(
-            dataset=test_set, split="test", space=self.cfg[self.cfg.MODEL.DATASET].SPACE
-        )
+        # test_set = SemanticDataset(
+        #     self.cfg[self.cfg.MODEL.DATASET].PATH,
+        #     self.cfg[self.cfg.MODEL.DATASET].CONFIG,
+        #     split="test",
+        #     seq=only_seq,
+        #     dataset=self.dataset,
+        # )
+        # self.test_pan_set = PanopticDataset(
+        #     dataset=test_set, split="test", space=self.cfg[self.cfg.MODEL.DATASET].SPACE
+        # )
 
-        print("created test")
+        # print("created test")
 
         self.things_ids = train_set.things_ids
         self.color_map = train_set.color_map
@@ -175,26 +177,16 @@ class SemanticDataset(Dataset):
         self.split = split
         split = semyaml["split"][self.split]
 
-        with open(f"{data_path}/transformations.yaml") as stream:
-            try:
-                transformations = yaml.safe_load(stream)["transformations"]
-            except yaml.YAMLError as exc:
-                print(exc)
-
-        gt_08 = np.asarray(transformations["gt_08"])
-        gt_14 = np.asarray(transformations["gt_14"])
-        gt_21 = np.asarray(transformations["gt_21"])
 
         if seq:
             split = [seq]
 
-        self.test = True
+        self.test = False
 
         if self.test:
             self.paths = [
-                    f"{data_path}/reduced_14_21_2.ply"
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/1.June20/row3/map.ply"
                     ]
-            self.Ts = [gt_21]
             self.pcds = self.read_pcd()
             self.extension = [0.20, 0.3]
             self.labelpaths = [
@@ -202,20 +194,28 @@ class SemanticDataset(Dataset):
                     ]
         else:
             self.paths = [
-                    f"{data_path}/reduced_08_14_1.ply",
-                    f"{data_path}/reduced_08_14_2.ply",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/1.June20/row3/map.ply",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/1.June20/row4/map.ply",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/2.June22/row3/map.ply",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/2.June22/row4/map.ply"
                     ]
-            self.Ts = [gt_08, gt_14]
             self.pcds = self.read_pcd()
             self.extension = [0.20, 0.3]
             self.labelpaths = [
-                    f"{data_path}/reduced_08_14_1.npy",
-                    f"{data_path}/reduced_08_14_2.npy",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/1.June20/row3/labels.txt",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/1.June20/row4/labels.txt",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/2.June22/row3/labels.txt",
+                    f"/home/fusy/Documents/DL/iris3d_peppers/MATTELU_pcds/2.June22/row4/labels.txt"
                     ]
 
-        print("SPLIT", self.split, self.paths)
+        # print("SPLIT", self.split, self.paths)
 
-        self.labels = [np.fromfile(self.labelpaths[i], dtype=np.int32) for i in range(len(self.labelpaths))]
+        self.labels = []
+        for p in self.labelpaths:
+            print("labels from", p)
+            with open(p, "r") as file:
+                self.labels.append(np.array([int(line.strip()) for line in file]))
+        # self.labels = [np.fromfile(self.labelpaths[i], dtype=np.int32) for i in range(len(self.labelpaths))]
 
         for idx, (pc, lab) in enumerate(zip(self.pcds, self.labels)):
             print("cloud", idx, "has", np.array(pc.points).shape, "labels", lab.shape, "unique ids:", np.unique(lab).shape)
@@ -223,7 +223,6 @@ class SemanticDataset(Dataset):
         self.infos = [ExtremeInfo(self.pcds[i], self.extension) for i in range(len(self.pcds))]
 
        #self.fullpivots = [info.generate_full_pivots() for info in self.infos]
-
 
         self.ext = 0.3
 
@@ -234,7 +233,6 @@ class SemanticDataset(Dataset):
     def read(self, idx):
         print("reading pcd ", idx, end="... ")
         pcd = o3d.io.read_point_cloud(self.paths[idx])
-        pcd.transform(self.Ts[idx])
         print("done!")
         return pcd
 
@@ -242,23 +240,58 @@ class SemanticDataset(Dataset):
     def __len__(self):
         return 1#len(self.fullpivots[0])
 
-    def __getitem__(self, min_x, max_x):
+    # def __getitem__(self, min_x, max_x):
 
-        pcd_idx = 0
+    #     pcd_idx = 0
 
-        points = np.array(self.pcds[pcd_idx].points)
-        colors = np.array(self.pcds[pcd_idx].colors)
+    #     points = np.array(self.pcds[pcd_idx].points)
+    #     colors = np.array(self.pcds[pcd_idx].colors)
         
-        #min_x, max_x = 28.5, 28.7
-        #min_x, max_x = self.infos[pcd_idx].get()
-        #pivot = self.fullpivots[pcd_idx][index]
-        #min_x, max_x = pivot-self.extension[0]/2, pivot+self.extension[0]/2
+    #     #min_x, max_x = 28.5, 28.7
+    #     #min_x, max_x = self.infos[pcd_idx].get()
+    #     #pivot = self.fullpivots[pcd_idx][index]
+    #     #min_x, max_x = pivot-self.extension[0]/2, pivot+self.extension[0]/2
 
-        print(f"CUTTING from {min_x:8.3f} to {max_x:8.3f}")
+    #     print(f"CUTTING from {min_x:8.3f} to {max_x:8.3f}")
 
-        mask = np.logical_and(points[:, 0]>=min_x,  points[:, 0]<=max_x)
+    #     mask = np.logical_and(points[:, 0]>=min_x,  points[:, 0]<=max_x)
 
-        ins_labels = self.labels[pcd_idx][mask]
+    #     ins_labels = self.labels[pcd_idx][mask]
+
+    #     points = points[mask]
+    #     colors = colors[mask]
+
+    #     mid_x = points[:, 0].min() + (points[:, 0].max() - points[:, 0].min())/2.0
+    #     mid_y = points[:, 1].min() + (points[:, 1].max() - points[:, 1].min())/2.0
+    #     mid_z = points[:, 2].min() + (points[:, 2].max() - points[:, 2].min())/2.0
+
+    #     points[:, 0] -= mid_x
+    #     points[:, 1] -= mid_y
+    #     points[:, 2] -= mid_z
+
+    #     #feats = np.hstack([points, colors])
+    #     sem_labels = np.array(ins_labels, copy=True)
+    #     sem_labels[sem_labels>0] = 1
+
+    #     return (points, sem_labels.astype(np.int64), ins_labels.astype(np.int64), colors, mask, mid_x, None)#fname, pose, token)
+    
+    def __getitem__(self, index):
+        while True:
+            pcd_idx = random.randint(0, len(self.paths)-1)
+            #print("chosen pcd idx", pcd_idx)
+
+            points = np.array(self.pcds[pcd_idx].points)
+            colors = np.array(self.pcds[pcd_idx].colors)
+            min_x, max_x = self.infos[pcd_idx].get()
+            print(f"CUTTING from {pcd_idx} - {min_x:8.3f} to {max_x:8.3f}")
+
+            mask = np.logical_and(points[:, 0]>=min_x,  points[:, 0]<=max_x)
+
+            ins_labels = self.labels[pcd_idx][mask]
+
+            if np.unique(ins_labels).shape[0]>1:
+                break
+
 
         points = points[mask]
         colors = colors[mask]
@@ -271,12 +304,12 @@ class SemanticDataset(Dataset):
         points[:, 1] -= mid_y
         points[:, 2] -= mid_z
 
+
         #feats = np.hstack([points, colors])
         sem_labels = np.array(ins_labels, copy=True)
         sem_labels[sem_labels>0] = 1
 
-        return (points, sem_labels.astype(np.int64), ins_labels.astype(np.int64), colors, mask, mid_x, None)#fname, pose, token)
-
+        return (points, sem_labels.astype(np.int64), ins_labels.astype(np.int64), colors, None, None, None)#fname, pose, token)
 
 
 class PanopticDataset(Dataset):
@@ -294,9 +327,12 @@ class PanopticDataset(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, min_x, max_x):
+    # def __getitem__(self, min_x, max_x):
+    #     #data = self.dataset[index]
+    #     data = self.dataset.__getitem__(min_x, max_x)
+    def __getitem__(self, index):
         #data = self.dataset[index]
-        data = self.dataset.__getitem__(min_x, max_x)
+        data = self.dataset.__getitem__(0)
         xyz, sem_labels, ins_labels, intensity, totmask, mid_x, token = data
         foreground = np.isin(sem_labels, self.th_ids).reshape(-1)
 

@@ -27,7 +27,7 @@ device = torch.device("cuda")
 ###### GENERAL PARAMETERS ######
 max_epochs_num = 200
 #mode = "testinst" #"kfold_crossvalidation", "finaltrain", "test", "testinst"
-seeds = [ 0, 13, 42, 1997]
+seeds = [ 0]
 
 datasets_from = []
 datasets_next = []
@@ -48,23 +48,24 @@ class CrossValidationSetup:
         self.iou_th   = iou_th
         self.seed = seeds[self.seedidx]
 
-        self.minx = 27.58
-        self.maxx = 29.45
+        self.minx = 0
+        self.maxx = 100
 
         self.epoch = 0
         self.max_epochs_num = max_epochs_num
 
-        with open(f"{self.datapath}/transformations.yaml") as stream:
-            try:
-                transformations = yaml.safe_load(stream)["transformations"]
-            except yaml.YAMLError as exc:
-                print(exc)
+        # with open(f"{self.datapath}/transformations.yaml") as stream:
+        #     try:
+        #         transformations = yaml.safe_load(stream)["transformations"]
+        #     except yaml.YAMLError as exc:
+        #         print(exc)
 
-        gt_08 = np.asarray(transformations["gt_08"])
-        gt_14 = np.asarray(transformations["gt_14"])
-        gt_21 = np.asarray(transformations["gt_21"])
+        # gt_08 = np.asarray(transformations["gt_08"])
+        # gt_14 = np.asarray(transformations["gt_14"])
+        # gt_21 = np.asarray(transformations["gt_21"])
 
-        Ts = {"08": gt_08, "14": gt_14, "21": gt_21}
+        # Ts = {"08": gt_08, "14": gt_14, "21": gt_21}
+        Ts = {"08": None, "14": None, "21": None}
 
         with open("backbone.yaml") as stream:
             try:
@@ -79,24 +80,25 @@ class CrossValidationSetup:
         np.random.seed(self.seed)
 
         if self.mode in ["kfold_crossvalidation", "finaltrain"]:
-            from_ = "08"
-            next_ = "14"
-            foldspath = f"{self.datapath}/{from_}_{next_}/kfoldsplit"
+            
+            foldspath = f"{self.datapath}"
             #datapath = "data/08_14"
 
-            fold_splits = glob.glob(os.path.join(foldspath, "split_*"))
+            fold_splits = glob.glob(os.path.join(foldspath, "peppers_*"))
             fold_splits.sort()
+            self.fold_splits = fold_splits
             
             for split_idx, foldpath in enumerate(fold_splits):
-                data_from = Strawberries(f"{self.datapath}/{from_}_{next_}/strawberries_{from_}", os.path.join(foldpath, "selections_1.json"), Ts[from_], min_x=0, max_x=100)
-                data_next = Strawberries(f"{self.datapath}/{from_}_{next_}/strawberries_{next_}", os.path.join(foldpath, "selections_2.json"), Ts[next_], min_x=0, max_x=100)
+                print("foldpath", foldpath)
+                data_from = Strawberries(f"{foldpath}/peppers_1", os.path.join(foldpath, "selections_1.json"), None, min_x=0, max_x=100)
+                data_next = Strawberries(f"{foldpath}/peppers_2", os.path.join(foldpath, "selections_2.json"), None, min_x=0, max_x=100)
                 datasets_from.append(data_from)
                 datasets_next.append(data_next)
 
                 dataloaders_from.append(DataLoader(datasets_from[-1], batch_size=len(datasets_from[-1]), shuffle=True,  collate_fn=datasets_from[-1].custom_collation_fn))
                 dataloaders_next.append(DataLoader(datasets_next[-1], batch_size=len(datasets_next[-1]), shuffle=True,  collate_fn=datasets_next[-1].custom_collation_fn))
 
-                connections.append(LossConnection(os.path.join(self.datapath, f"{from_}_{next_}", "connections.json"), datasets_from[-1], datasets_next[-1]))
+                connections.append(LossConnection(os.path.join(foldpath, "connections.json"), datasets_from[-1], datasets_next[-1]))
                 connections[-1].printSummary(split_idx)
 
         if self.mode=="kfold_crossvalidation":
@@ -199,14 +201,14 @@ class CrossValidationSetup:
         self.logfile.write(f"max_epochs_num {self.max_epochs_num}\n")
 
     def setupKFold(self):
-        self.trainsets_idx = np.arange(len(fold_splits), dtype=np.int32)
+        self.trainsets_idx = np.arange(len(self.fold_splits), dtype=np.int32)
         self.trainsets_idx = np.delete(self.trainsets_idx, self.foldidx)
         self.validsets_idx = np.array([self.foldidx])
         self.setupTrainValidSets()
 
     def setupFinalTrain(self):
-        self.trainsets_idx = np.arange(len(fold_splits)-1, dtype=np.int32)
-        self.validsets_idx = np.array([len(fold_splits)-1])
+        self.trainsets_idx = [0, 2] #np.arange(len(self.fold_splits)-1, dtype=np.int32)
+        self.validsets_idx = [1] #np.array([len(self.fold_splits)-1])
         self.setupTrainValidSets()
 
     def setupTrainValidSets(self):
@@ -497,28 +499,29 @@ def main(
         "--data",
         help="data path ()",
     ),
-    iou: float = typer.Option(
-        ...,
-        "--iou",
-        help="IoU threshold",
-    ),
+    # iou: float = typer.Option(
+    #     ...,
+    #     "--iou",
+    #     help="IoU threshold",
+    # ),
 ):
     f1ps, f1ns, f1s = [], [], []
 
     print("mode: ", mode)
 
     for seedidx, _ in enumerate(seeds):
-        split = CrossValidationSetup(-1, seedidx, mode, datapath, iou)
-        f1p, f1n, f1 = split.run_test()
-        f1ps.append(f1p); f1ns.append(f1n); f1s.append(f1)
+        split = CrossValidationSetup(-1, seedidx, mode, datapath)
+        # f1p, f1n, f1 = split.run_test()
+        split.run()
+    #     f1ps.append(f1p); f1ns.append(f1n); f1s.append(f1)
         
-    f1ps, f1ns, f1s = np.array(f1ps), np.array(f1ns), np.array(f1s)
-    print("#####################")
-    print("final results")
-    print(f"f1p {f1ps.mean()*100:4.1f} +- {f1ps.std()*100:4.1f}")
-    print(f"f1n {f1ns.mean()*100:4.1f} +- {f1ns.std()*100:4.1f}")
-    print(f"f1  {f1s.mean()*100:4.1f} +- {f1s.std()*100:4.1f}")
-    print("#####################")
+    # f1ps, f1ns, f1s = np.array(f1ps), np.array(f1ns), np.array(f1s)
+    # print("#####################")
+    # print("final results")
+    # print(f"f1p {f1ps.mean()*100:4.1f} +- {f1ps.std()*100:4.1f}")
+    # print(f"f1n {f1ns.mean()*100:4.1f} +- {f1ns.std()*100:4.1f}")
+    # print(f"f1  {f1s.mean()*100:4.1f} +- {f1s.std()*100:4.1f}")
+    # print("#####################")
 
 if __name__ == "__main__":
     cli()

@@ -8,7 +8,7 @@ BACKBONE:
         DIMENSION: 3                    # 3D pts
         CR: 1                           # channel ratio, change feature dimensions
         #CHANNELS: [8, 12, 16, 16, 16]
-        CHANNELS: [8, 8, 16, 16, 64]
+        CHANNELS: [8, 8, 16, 16, 64] #[8, 8, 16, 16, 64]
         #CHANNELS: [8, 16, 16, 32, 64]
         #CHANNELS: [8, 16, 32, 32, 32]
         RESOLUTION: 0.0005

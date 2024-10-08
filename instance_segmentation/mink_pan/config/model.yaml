@@ -6,7 +6,7 @@ TRAIN:
     MAX_EPOCH: 100
     BATCH_SIZE: 2
     BATCH_ACC: 4
-    NUM_WORKERS: 6
+    NUM_WORKERS: 0
     N_GPUS: -1
     FREEZE_MODULES: []
     #FREEZE_MODULES: ['BACKBONE','SEM_HEAD','INS_HEAD']
@@ -26,7 +26,7 @@ LOSS:
         WEIGHTS: [2,6] #Ce, Lovasz
 
 STRAWBERRIES:
-    PATH: /home/fusy/Documents/strawberries/DeployStrawberries/data #data/kitti
+    PATH: MATTELU_pcds #data/kitti
     CONFIG: datasets/strawberries.yaml
     NUM_CLASSES: 2 #Get from yaml
     IGNORE_LABEL: -1
@@ -35,7 +35,7 @@ STRAWBERRIES:
     MIN_VOLUME_SPACE: [3,'-pi',-3]
     MAX_VOLUME_SPACE: [50,'pi',1.5]
     MINI: False
-    SUB_NUM_POINTS: 400000
+    SUB_NUM_POINTS: 40000
 
 KITTI:
     PATH: data/kitti

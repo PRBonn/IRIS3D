@@ -71,6 +71,9 @@ class MinkPan(LightningModule):
         return loss
 
     def training_step(self, x: dict, idx):
+        for A in x["pt_coord"]:
+            print(A.shape, end=" ")
+        print()
         sem_logits, offsets, ins_feat = self(x)
         loss_dict = self.getLoss(x, sem_logits, offsets)
 
@@ -79,6 +82,7 @@ class MinkPan(LightningModule):
 
         total_loss = sum(loss_dict.values())
         self.log("train_loss", total_loss, batch_size=self.cfg.TRAIN.BATCH_SIZE)
+        del loss_dict, sem_logits, offsets, ins_feat, x
         torch.cuda.empty_cache()
         self.steps += 1
         return total_loss
@@ -92,6 +96,7 @@ class MinkPan(LightningModule):
 
         loss_dict = self.getLoss(x, sem_logits, offsets)
 
+        torch.cuda.empty_cache()
 
 #        sem_logits_gt = torch.zeros((sem_logits[0].shape[0], 2)).cuda()
 #        sem_logits_gt[x["sem_label"][0]==0, 0] = 1.0
@@ -107,20 +112,20 @@ class MinkPan(LightningModule):
         #sem_pred, ins_pred = self.inference(x, [sem_logits_gt], offsets) #sem_logits, offsets)
         sem_pred, ins_pred = self.inference(x, sem_logits, offsets) #sem_logits, offsets)
 
+        inst = x["ins_label"][0] #ins_pred[0]
+        u = np.unique(inst)
 
         print("unique groundtruth insts", np.unique(x["ins_label"][0]))
-        print("unique predicted   insts", np.unique(ins_pred[0]))
+        print("unique predicted   insts", u)
 
-        inst = ins_pred[0]
         #inst = x["ins_label"][0]
-        u = np.unique(inst)
-        table = np.random.uniform(0.1, 1.0, (u.max()+1, 3))
-        table[0, :] = 0
-        idxcol = table[inst]
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(x["pt_coord"][0])
-        pcd.colors = o3d.utility.Vector3dVector(idxcol)
-        o3d.visualization.draw(pcd)
+        # table = np.random.uniform(0.1, 1.0, (u.max()+1, 3))
+        # table[0, :] = 0
+        # idxcol = table[inst]
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(x["pt_coord"][0])
+        # pcd.colors = o3d.utility.Vector3dVector(idxcol)
+        # o3d.visualization.draw(pcd)
 
         for k, v in loss_dict.items():
             self.log(f"val/{k}", v, batch_size=self.cfg.TRAIN.BATCH_SIZE)
@@ -132,16 +137,16 @@ class MinkPan(LightningModule):
 
         coords = x["pt_coord"][0]
 
-        coords[x["foreground"][0]] = coords[x["foreground"][0]] + x["offset"][0][x["foreground"][0]]#offsets[0][x["foreground"][0]].detach().cpu().numpy()
+        coords[x["foreground"][0]] = coords[x["foreground"][0]] + x["offset"][0][x["foreground"][0]]
 
         colors = np.zeros_like(coords)
 
         colors[x["foreground"][0]] = [1, 0 ,0]
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(coords)
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-        o3d.visualization.draw(pcd)
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(coords)
+        # pcd.colors = o3d.utility.Vector3dVector(colors)
+        # o3d.visualization.draw(pcd)
 
         coords = x["pt_coord"][0]
 
@@ -151,10 +156,11 @@ class MinkPan(LightningModule):
 
         colors[x["foreground"][0]] = [0, 0, 1]
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(coords)
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-        o3d.visualization.draw(pcd)
+        # pcd = o3d.geometry.PointCloud()
+        # pcd.points = o3d.utility.Vector3dVector(coords)
+        # pcd.colors = o3d.utility.Vector3dVector(colors)
+        # o3d.visualization.draw(pcd)
+        torch.cuda.empty_cache()
 
         return total_loss
 
